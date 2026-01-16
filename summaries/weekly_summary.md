@@ -1,20 +1,48 @@
 # 📊 Slack Weekly Summary Report
 
 **📅 Period:** 2025-12-17 to 2026-01-16
-**🕐 Generated:** 2026-01-16 09:08:02
+**🕐 Generated:** 2026-01-16 10:17:38
 
-**📢 Total Channels Found:** 0
+**📢 Total Channels Found:** 3
 
 ---
 
-## ⚠️ No Channels Found
+## #random
 
-**Possible reasons:**
-- You're not a member of any channels
-- Slack token doesn't have correct permissions
-- Token might be a Bot token instead of User token
+**Messages found:** 1 (all were system messages)
 
-**Debug Log:**
+---
+
+## #all-demo
+
+**Message Count:** 8
+
+⚠️ Error generating summary: 404 models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+
+Raw message count: 8
+
+---
+
+## #website
+
+**Message Count:** 2
+
+⚠️ Error generating summary: 404 models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+
+Raw message count: 2
+
+---
+
+
+## 📈 Summary Statistics
+
+- **Total Channels Found:** 3
+- **Channels Processed:** 2
+- **Total Messages Analyzed:** 10
+- **Average Messages per Channel:** 5.0
+
+## 🔍 Debug Log
+
 ```
 
 ============================================================
@@ -22,7 +50,32 @@
 📅 Period: Last 30 days
 ============================================================
 
-Error fetching channels: The request to the Slack API failed. (url: https://slack.com/api/conversations.list)
-The server responded with: {'ok': False, 'error': 'missing_scope', 'needed': 'groups:read', 'provided': 'identify,channels:history,groups:history,channels:read,users:read'}
-❌ No channels found!
+Total channels found: 3
+Channels you're a member of: 3
+
+Your channels:
+  - #random (ID: C0A1T7EKE0K)
+  - #all-demo (ID: C0A236L09FE)
+  - #website (ID: C0A2CGLDSD7)
+
+[1/3] Processing #random...
+    Page 1: fetched 1 messages
+  ✅ Found 1 total messages
+  ⏭️  Skipping - no meaningful content after filtering
+
+[2/3] Processing #all-demo...
+    Page 1: fetched 8 messages
+  ✅ Found 8 total messages
+  📝 Formatted content length: 1486 characters
+  🤖 Generating AI summary...
+  Retry 1/3 after 3s...
+  Retry 2/3 after 6s...
+
+[3/3] Processing #website...
+    Page 1: fetched 2 messages
+  ✅ Found 2 total messages
+  📝 Formatted content length: 204 characters
+  🤖 Generating AI summary...
+  Retry 1/3 after 3s...
+  Retry 2/3 after 6s...
 ```
