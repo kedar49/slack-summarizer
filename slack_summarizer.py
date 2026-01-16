@@ -181,16 +181,3 @@ Provide a structured summary with sections for Topics, Decisions, Action Items, 
 if __name__ == "__main__":
     summarizer = SlackSummarizer()
     summarizer.run(days_back=7)
-```
-
-4. Scroll down and click **"Commit changes"**
-5. Click **"Commit changes"** again in the popup
-
-### Step 12: Create Requirements File
-
-1. Click **"Add file"** → **"Create new file"**
-2. **Name**: `requirements.txt`
-3. Paste this:
-```
-slack-sdk>=3.23.0
-google-generativeai>=0.3.0
