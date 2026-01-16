@@ -18,12 +18,17 @@ class SlackSummarizer:
         genai.configure(api_key=self.gemini_key)
         self.model = genai.GenerativeModel('gemini-1.5-flash')
         self.user_cache = {}
+        self.debug_log = []
+        
+    def log(self, message):
+        """Log messages for debugging"""
+        print(message)
+        self.debug_log.append(message)
         
     def get_channels(self):
         """Get list of all channels the user is a member of"""
         all_channels = []
         try:
-            # Get public channels
             cursor = None
             while True:
                 response = self.client.conversations_list(
@@ -38,14 +43,19 @@ class SlackSummarizer:
                 if not cursor:
                     break
                     
-            print(f"Total channels found: {len(all_channels)}")
-            # Filter to only channels the user is a member of
+            self.log(f"Total channels found: {len(all_channels)}")
             member_channels = [c for c in all_channels if c.get('is_member', False)]
-            print(f"Channels you're a member of: {len(member_channels)}")
+            self.log(f"Channels you're a member of: {len(member_channels)}")
+            
+            if member_channels:
+                self.log("\nYour channels:")
+                for ch in member_channels:
+                    self.log(f"  - #{ch['name']} (ID: {ch['id']})")
+            
             return member_channels
             
         except SlackApiError as e:
-            print(f"Error fetching channels: {e}")
+            self.log(f"Error fetching channels: {e}")
             return []
     
     def get_user_name(self, user_id):
@@ -70,21 +80,25 @@ class SlackSummarizer:
         
         try:
             cursor = None
+            page = 0
             while True:
+                page += 1
                 response = self.client.conversations_history(
                     channel=channel_id,
                     oldest=str(oldest),
                     limit=200,
                     cursor=cursor
                 )
-                messages.extend(response['messages'])
+                batch = response['messages']
+                messages.extend(batch)
+                self.log(f"    Page {page}: fetched {len(batch)} messages")
                 
                 cursor = response.get('response_metadata', {}).get('next_cursor')
-                if not cursor or len(messages) > 2000:  # Safety limit
+                if not cursor or len(messages) > 2000:
                     break
                     
         except SlackApiError as e:
-            print(f"  Error fetching messages: {e}")
+            self.log(f"  Error fetching messages: {e}")
         
         return messages
     
@@ -96,10 +110,9 @@ class SlackSummarizer:
                 ts=thread_ts,
                 limit=100
             )
-            # Skip the first message (it's the parent)
             return response['messages'][1:] if len(response['messages']) > 1 else []
         except SlackApiError as e:
-            print(f"  Error fetching thread: {e}")
+            self.log(f"  Error fetching thread: {e}")
             return []
     
     def format_file_info(self, file_data):
@@ -109,7 +122,6 @@ class SlackSummarizer:
         filetype = file_data.get('filetype', 'file')
         size = file_data.get('size', 0)
         
-        # Convert bytes to readable format
         if size > 1024*1024:
             size_str = f"{size/(1024*1024):.1f}MB"
         elif size > 1024:
@@ -119,7 +131,6 @@ class SlackSummarizer:
         
         info = f"📎 {title or name} ({filetype}, {size_str})"
         
-        # Add preview if available
         if file_data.get('preview'):
             preview = file_data['preview'][:200]
             info += f"\n   Preview: {preview}..."
@@ -133,11 +144,9 @@ class SlackSummarizer:
             
         formatted = f"# Channel: {channel_name}\n\n"
         
-        # Sort by timestamp
         messages.sort(key=lambda x: float(x.get('ts', 0)))
         
         for msg in messages:
-            # Skip system messages
             if msg.get('subtype') in ['channel_join', 'channel_leave', 'channel_archive']:
                 continue
             
@@ -146,15 +155,12 @@ class SlackSummarizer:
             text = msg.get('text', '')
             timestamp = datetime.fromtimestamp(float(msg.get('ts', 0))).strftime('%Y-%m-%d %H:%M')
             
-            # Main message
             formatted += f"\n[{timestamp}] **{username}**: {text}\n"
             
-            # Add file attachments
             if msg.get('files'):
                 for file_data in msg['files']:
                     formatted += f"  {self.format_file_info(file_data)}\n"
             
-            # Add other attachments (links, etc)
             if msg.get('attachments'):
                 for att in msg['attachments']:
                     if att.get('title'):
@@ -162,17 +168,15 @@ class SlackSummarizer:
                     if att.get('text'):
                         formatted += f"     {att['text'][:150]}...\n"
             
-            # Add reactions
             if msg.get('reactions'):
                 reactions = ', '.join([f"{r['name']}({r['count']})" for r in msg['reactions']])
                 formatted += f"  Reactions: {reactions}\n"
             
-            # Handle threaded replies
             if msg.get('reply_count', 0) > 0 and not msg.get('thread_ts'):
                 thread_replies = self.fetch_thread_replies(channel_id, msg['ts'])
                 if thread_replies:
                     formatted += f"  💬 Thread ({len(thread_replies)} replies):\n"
-                    for reply in thread_replies[:5]:  # Limit to first 5 replies
+                    for reply in thread_replies[:5]:
                         reply_user = self.get_user_name(reply.get('user', 'Unknown'))
                         reply_text = reply.get('text', '')[:100]
                         formatted += f"    ↳ {reply_user}: {reply_text}\n"
@@ -231,36 +235,51 @@ Be detailed and specific. Include names, dates, and context where available."""
             except Exception as e:
                 if attempt < max_retries - 1:
                     wait_time = (attempt + 1) * 3
-                    print(f"  Retry {attempt + 1}/{max_retries} after {wait_time}s...")
+                    self.log(f"  Retry {attempt + 1}/{max_retries} after {wait_time}s...")
                     time.sleep(wait_time)
                 else:
                     return f"⚠️ Error generating summary: {str(e)}\n\nRaw message count: {message_count}"
     
     def run(self, days_back=7, output_file='summaries/weekly_summary.md'):
         """Main execution function"""
-        print(f"\n{'='*60}")
-        print(f"🚀 Starting Slack Summarization")
-        print(f"📅 Period: Last {days_back} days")
-        print(f"{'='*60}\n")
+        self.log(f"\n{'='*60}")
+        self.log(f"🚀 Starting Slack Summarization")
+        self.log(f"📅 Period: Last {days_back} days")
+        self.log(f"{'='*60}\n")
         
-        channels = self.get_channels()
-        
-        if not channels:
-            print("❌ No channels found. Please check:")
-            print("   1. Your Slack token is correct")
-            print("   2. You're a member of some channels")
-            print("   3. The app has the right permissions")
-            return
-        
+        # ALWAYS create the output file
         all_summaries = []
         date_range = f"{(datetime.now() - timedelta(days=days_back)).strftime('%Y-%m-%d')} to {datetime.now().strftime('%Y-%m-%d')}"
         
         # Header
         all_summaries.append(f"# 📊 Slack Weekly Summary Report\n\n")
         all_summaries.append(f"**📅 Period:** {date_range}\n")
-        all_summaries.append(f"**🕐 Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-        all_summaries.append(f"**📢 Channels Analyzed:** {len(channels)}\n\n")
+        all_summaries.append(f"**🕐 Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+        
+        channels = self.get_channels()
+        
+        all_summaries.append(f"**📢 Total Channels Found:** {len(channels)}\n\n")
         all_summaries.append("---\n\n")
+        
+        if not channels:
+            self.log("❌ No channels found!")
+            all_summaries.append("## ⚠️ No Channels Found\n\n")
+            all_summaries.append("**Possible reasons:**\n")
+            all_summaries.append("- You're not a member of any channels\n")
+            all_summaries.append("- Slack token doesn't have correct permissions\n")
+            all_summaries.append("- Token might be a Bot token instead of User token\n\n")
+            all_summaries.append("**Debug Log:**\n```\n")
+            all_summaries.append('\n'.join(self.debug_log))
+            all_summaries.append("\n```\n")
+            
+            # Still save the file!
+            output_dir = os.path.dirname(output_file)
+            if output_dir:
+                os.makedirs(output_dir, exist_ok=True)
+            with open(output_file, 'w', encoding='utf-8') as f:
+                f.writelines(all_summaries)
+            self.log(f"✅ Debug file saved to: {output_file}")
+            return output_file
         
         channels_processed = 0
         total_messages = 0
@@ -269,33 +288,38 @@ Be detailed and specific. Include names, dates, and context where available."""
             channel_name = channel['name']
             channel_id = channel['id']
             
-            print(f"[{idx}/{len(channels)}] Processing #{channel_name}...")
+            self.log(f"\n[{idx}/{len(channels)}] Processing #{channel_name}...")
             
             messages = self.fetch_messages(channel_id, days_back)
             
             if not messages:
-                print(f"  ⚠️  No messages found")
+                self.log(f"  ⚠️  No messages found in last {days_back} days")
+                all_summaries.append(f"## #{channel_name}\n\n")
+                all_summaries.append(f"⚠️ No messages in the last {days_back} days\n\n")
+                all_summaries.append("---\n\n")
                 continue
             
-            print(f"  ✅ Found {len(messages)} messages")
+            self.log(f"  ✅ Found {len(messages)} total messages")
             
             formatted_text = self.format_messages(messages, channel_name, channel_id)
             
-            # Only skip if truly empty
             if not formatted_text or len(formatted_text) < 50:
-                print(f"  ⏭️  Skipping - no meaningful content")
+                self.log(f"  ⏭️  Skipping - no meaningful content after filtering")
+                all_summaries.append(f"## #{channel_name}\n\n")
+                all_summaries.append(f"**Messages found:** {len(messages)} (all were system messages)\n\n")
+                all_summaries.append("---\n\n")
                 continue
             
-            # Truncate if needed for API limits
+            self.log(f"  📝 Formatted content length: {len(formatted_text)} characters")
+            
             if len(formatted_text) > 25000:
-                print(f"  ⚠️  Truncating content (too long)")
+                self.log(f"  ⚠️  Truncating content (too long for API)")
                 formatted_text = formatted_text[:25000] + "\n\n... (content truncated for API limits)"
             
-            print(f"  🤖 Generating AI summary...")
+            self.log(f"  🤖 Generating AI summary...")
             summary = self.summarize_with_gemini(formatted_text, channel_name, len(messages))
             
-            # Add to final output
-            all_summaries.append(f"# 📢 #{channel_name}\n\n")
+            all_summaries.append(f"## #{channel_name}\n\n")
             all_summaries.append(f"**Message Count:** {len(messages)}\n\n")
             all_summaries.append(f"{summary}\n\n")
             all_summaries.append("---\n\n")
@@ -303,27 +327,68 @@ Be detailed and specific. Include names, dates, and context where available."""
             channels_processed += 1
             total_messages += len(messages)
             
-            # Rate limiting
             time.sleep(3)
         
-        # Add summary footer
+        # Summary statistics
         all_summaries.append(f"\n## 📈 Summary Statistics\n\n")
-        all_summaries.append(f"- **Total Channels Processed:** {channels_processed}\n")
+        all_summaries.append(f"- **Total Channels Found:** {len(channels)}\n")
+        all_summaries.append(f"- **Channels Processed:** {channels_processed}\n")
         all_summaries.append(f"- **Total Messages Analyzed:** {total_messages}\n")
-        all_summaries.append(f"- **Average Messages per Channel:** {total_messages/channels_processed if channels_processed > 0 else 0:.1f}\n")
+        all_summaries.append(f"- **Average Messages per Channel:** {total_messages/channels_processed if channels_processed > 0 else 0:.1f}\n\n")
         
-        # Save to file
-        os.makedirs(os.path.dirname(output_file), exist_ok=True)
+        # Add debug log at the end
+        all_summaries.append(f"## 🔍 Debug Log\n\n```\n")
+        all_summaries.append('\n'.join(self.debug_log[-50:]))  # Last 50 log entries
+        all_summaries.append("\n```\n")
+        
+        # FORCE file creation
+        output_dir = os.path.dirname(output_file)
+        self.log(f"\n📝 Saving summary to: {output_file}")
+        self.log(f"   Output directory: {output_dir or 'current directory'}")
+        
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
+            self.log(f"   ✅ Directory created/verified")
+        
+        self.log(f"   Writing {len(all_summaries)} lines to file...")
         with open(output_file, 'w', encoding='utf-8') as f:
             f.writelines(all_summaries)
         
-        print(f"\n{'='*60}")
-        print(f"✅ Summary saved to: {output_file}")
-        print(f"📊 Processed {channels_processed} channels with {total_messages} total messages")
-        print(f"{'='*60}\n")
+        # Verify
+        if os.path.exists(output_file):
+            file_size = os.path.getsize(output_file)
+            self.log(f"   ✅ File created! Size: {file_size} bytes")
+            
+            # Print first few lines
+            with open(output_file, 'r') as f:
+                preview = f.read(500)
+            self.log(f"\n📄 File preview:\n{preview}...")
+        else:
+            self.log(f"   ❌ ERROR: File was NOT created!")
+            self.log(f"   Current working directory: {os.getcwd()}")
+            self.log(f"   Files in current directory: {os.listdir('.')}")
+        
+        self.log(f"\n{'='*60}")
+        self.log(f"✅ Process completed!")
+        self.log(f"📊 Processed {channels_processed} channels with {total_messages} total messages")
+        self.log(f"{'='*60}\n")
         
         return output_file
 
 if __name__ == "__main__":
-    summarizer = SlackSummarizer()
-    summarizer.run(days_back=7)
+    try:
+        summarizer = SlackSummarizer()
+        result = summarizer.run(days_back=30)  # Changed to 30 days for better chance of finding messages
+        print(f"\n✅ SUCCESS! Summary file: {result}")
+    except Exception as e:
+        print(f"\n❌ FATAL ERROR: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        # Create error file
+        os.makedirs('summaries', exist_ok=True)
+        with open('summaries/weekly_summary.md', 'w') as f:
+            f.write(f"# ❌ Error Running Summarizer\n\n")
+            f.write(f"**Error:** {str(e)}\n\n")
+            f.write(f"**Traceback:**\n```\n{traceback.format_exc()}\n```\n")
+        print("Error details saved to summaries/weekly_summary.md")
