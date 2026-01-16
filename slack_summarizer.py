@@ -16,7 +16,10 @@ class SlackSummarizer:
         
         self.client = WebClient(token=self.slack_token)
         genai.configure(api_key=self.gemini_key)
-        self.model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        # Use gemini-2.0-flash-lite (fast and efficient)
+        self.model = genai.GenerativeModel('gemini-2.0-flash-lite')
+        self.log(f"✅ Using model: gemini-2.0-flash-lite")
         self.user_cache = {}
         self.debug_log = []
         
