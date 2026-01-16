@@ -1,0 +1,41 @@
+name: Weekly Slack Summary
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+jobs:
+  summarize:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install dependencies
+      run: |
+        pip install slack-sdk google-generativeai
+    
+    - name: Run summarizer
+      env:
+        SLACK_USER_TOKEN: ${{ secrets.SLACK_USER_TOKEN }}
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      run: |
+        python slack_summarizer.py
+    
+    - name: Commit and push summary
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git add summaries/
+        git diff --quiet && git diff --staged --quiet || git commit -m "Weekly Slack summary - $(date +'%Y-%m-%d')"
+        git push
