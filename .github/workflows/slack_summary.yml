@@ -59,17 +59,28 @@ jobs:
     
     - name: Check output
       run: |
+        echo "==================================="
         echo "Checking if summary was generated..."
+        echo "==================================="
+        echo ""
+        echo "Current directory contents:"
+        ls -la
+        echo ""
+        echo "Summaries directory contents:"
+        ls -la summaries/ || echo "summaries directory doesn't exist"
+        echo ""
         if [ -f "summaries/weekly_summary.md" ]; then
-          echo "Summary file found!"
+          echo "✅ Summary file FOUND!"
           echo "File size: $(wc -c < summaries/weekly_summary.md) bytes"
           echo "Line count: $(wc -l < summaries/weekly_summary.md) lines"
           echo ""
-          echo "First 50 lines of summary:"
-          head -50 summaries/weekly_summary.md
+          echo "=========================================="
+          echo "FULL SUMMARY FILE CONTENT:"
+          echo "=========================================="
+          cat summaries/weekly_summary.md
         else
-          echo "WARNING: Summary file not found!"
-          ls -la summaries/ || echo "summaries directory doesn't exist"
+          echo "❌ WARNING: Summary file NOT FOUND!"
+          echo "This should never happen - the script should always create a file"
         fi
     
     - name: Commit and push summary
