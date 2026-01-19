@@ -1,7 +1,7 @@
 # 📊 Slack Weekly Summary Report
 
 **📅 Period:** 2025-12-20 to 2026-01-19
-**🕐 Generated:** 2026-01-19 07:42:15
+**🕐 Generated:** 2026-01-19 09:32:00
 
 **📢 Total Channels Found:** 3
 
@@ -21,7 +21,7 @@
 * Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash-lite
 * Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash-lite
 * Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 0, model: gemini-2.0-flash-lite
-Please retry in 33.083713566s. [links {
+Please retry in 49.557678988s. [links {
   description: "Learn more about Gemini API quotas"
   url: "https://ai.google.dev/gemini-api/docs/rate-limits"
 }
@@ -62,7 +62,7 @@ violations {
   }
 }
 , retry_delay {
-  seconds: 33
+  seconds: 49
 }
 ]
 
@@ -75,16 +75,16 @@ Raw message count: 8
 **Message Count:** 2
 
 ⚠️ Error generating summary: 429 You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash-lite
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash-lite
 * Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 0, model: gemini-2.0-flash-lite
-* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash-lite
-* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash-lite
-Please retry in 20.580439379s. [links {
+Please retry in 37.288643257s. [links {
   description: "Learn more about Gemini API quotas"
   url: "https://ai.google.dev/gemini-api/docs/rate-limits"
 }
 , violations {
-  quota_metric: "generativelanguage.googleapis.com/generate_content_free_tier_input_token_count"
-  quota_id: "GenerateContentInputTokensPerModelPerMinute-FreeTier"
+  quota_metric: "generativelanguage.googleapis.com/generate_content_free_tier_requests"
+  quota_id: "GenerateRequestsPerDayPerProjectPerModel-FreeTier"
   quota_dimensions {
     key: "model"
     value: "gemini-2.0-flash-lite"
@@ -107,8 +107,8 @@ violations {
   }
 }
 violations {
-  quota_metric: "generativelanguage.googleapis.com/generate_content_free_tier_requests"
-  quota_id: "GenerateRequestsPerDayPerProjectPerModel-FreeTier"
+  quota_metric: "generativelanguage.googleapis.com/generate_content_free_tier_input_token_count"
+  quota_id: "GenerateContentInputTokensPerModelPerMinute-FreeTier"
   quota_dimensions {
     key: "model"
     value: "gemini-2.0-flash-lite"
@@ -119,7 +119,7 @@ violations {
   }
 }
 , retry_delay {
-  seconds: 20
+  seconds: 37
 }
 ]
 
