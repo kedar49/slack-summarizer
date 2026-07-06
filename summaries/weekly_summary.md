@@ -1,7 +1,7 @@
 # 📊 Slack Weekly Summary Report
 
-**📅 Period:** 2026-05-30 to 2026-06-29
-**🕐 Generated:** 2026-06-29 13:03:59
+**📅 Period:** 2026-06-06 to 2026-07-06
+**🕐 Generated:** 2026-07-06 12:43:14
 
 **📢 Total Channels Found:** 3
 
